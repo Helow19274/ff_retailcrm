@@ -27,7 +27,7 @@ $statuses = [
     'cancel' => 'cancel-other'
 ];
 
-function send_request($url, $query = null, $body = null, $headers = null, $type='GET', $return_ch = false) {
+function send_request($url, $query = null, $body = null, $headers = null, $type='GET', $return_ch = false, $log = false) {
     global $oa_base, $retail_base;
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $type);
@@ -68,6 +68,17 @@ function send_request($url, $query = null, $body = null, $headers = null, $type=
         curl_setopt($ch, CURLOPT_USERPWD, $oa_login . ':' . $oa_password);
     }
 
+    if ($log) {
+        log_to_file('Отправка HTTP запроса');
+        log_to_file('URL: ' . $url);
+        log_to_file('Query: ' . $query);
+        log_to_file('Body: ' . $body);
+        log_to_file('Headers: ' . $headers);
+        log_to_file('Headers 2: ' . $h);
+        log_to_file('Method: ' . $type);
+        log_to_file('Raw: ' . $return_ch);
+    }
+
     curl_setopt($ch, CURLOPT_HTTPHEADER, $h);
     if ($return_ch) {
         return $ch;
@@ -75,13 +86,20 @@ function send_request($url, $query = null, $body = null, $headers = null, $type=
 
     $r = curl_exec($ch);
     curl_close($ch);
+
+    if ($log) {
+        log_to_file('Ответ:');
+        log_to_file($r);
+    }
+
     return json_decode($r, true);
 }
 
-function set_order_status($order_id, $status, $comment=null) {
+function set_order_status($order_id, $site_id, $status, $comment=null) {
     global $retail_base;
     $payload = [
         'by' => 'id',
+        'site' => $site_id,
         'order' => [
             'status' => $status,
             'statusComment' => $comment

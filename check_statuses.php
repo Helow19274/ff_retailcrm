@@ -15,7 +15,7 @@ $payload = [
     'per_page' => 250
 ];
 $new_orders = send_request($oa_base . 'products/order', $payload)['_embedded']['order'];
-log_to_file('Найдено заказов для обновления: ' . sizeof($new_orders));
+log_to_file(date('d.m.Y H:i:s') . '. Найдено заказов для обновления: ' . sizeof($new_orders));
 
 if (!$new_orders)
     die();
@@ -37,6 +37,7 @@ foreach ($new_orders as $order) {
     }
     $payload = [
         'by' => 'id',
+        'site' => $retail_order['site'],
         'order' => []
     ];
     if ($retail_status != null and $retail_status != $retail_order['status']) {
@@ -51,7 +52,7 @@ foreach ($new_orders as $order) {
         }
         if ($delivery_request['trackingNumber'] and $delivery_request['trackingNumber'] != $current_tracking_number) {
             $payload['order']['customFields'] = [
-                $tracking_number_field => $order['_embedded']['deliveryRequest']['trackingNumber']
+                $tracking_number_field => $delivery_request['trackingNumber']
             ];
         }
     }

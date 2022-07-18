@@ -11,13 +11,13 @@ if (!array_key_exists('code', $_POST)
 
 require_once 'base.php';
 
-log_to_file('----' . $_POST['orderId'] . ' ' . $_POST['action'] . '------');
+log_to_file('----' . $_POST['orderId'] . ' ' . $_POST['action'] . ' ' . date('d.m.Y H:i:s') . '------');
 log_to_file($_POST);
 
 function failed_to_create_order($reason) {
     global $order, $status_failed;
     log_to_file($reason);
-    set_order_status($order['id'], $status_failed, $reason);
+    set_order_status($order['id'], $order['site'], $status_failed, $reason);
 }
 
 if ($_POST['action'] == 'create') {
@@ -221,7 +221,7 @@ if ($_POST['action'] == 'create') {
         }
         failed_to_create_order('Ошибка создания заказа: ' . $error);
     } else {
-        set_order_status($order['id'], $status_success);
+        set_order_status($order['id'], $order['site'], $status_success);
     }
 
     file_put_contents('log.txt', print_r($r, true), FILE_APPEND);
