@@ -42,7 +42,7 @@ if ($_POST['action'] == 'create') {
     ];
     $rate = send_request($oa_base . 'delivery-services/rates', $payload)['_embedded']['rates'];
     if (sizeof($rate) == 0) {
-        failed_to_create_order('В ФФ не найден тариф доставки ' . $order['delivery']['data']['tariffType']);
+        failed_to_create_order('В ФФ не найден тариф доставки ' . $tariff);
         die();
     }
 
