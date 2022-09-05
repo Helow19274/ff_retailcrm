@@ -224,7 +224,8 @@ if ($_POST['action'] == 'create') {
         set_order_status($order['id'], $order['site'], $status_success);
     }
 
-    file_put_contents('log.txt', print_r($r, true), FILE_APPEND);
+    log_to_file($r);
+    log_to_file('Код ответа: ' . $code);
 } elseif ($_POST['action'] == 'cancel') {
     $payload = [
         'filter' => [[
