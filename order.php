@@ -84,7 +84,12 @@ if ($_POST['action'] == 'create') {
     }
 
     if (array_key_exists('phone', $order)) {
-        $order_payload['phone'] = $order['phone'];
+        $phone = $order['phone'];
+        if (substr($phone, 0, 1) == '7' or substr($phone, 0, 1) == '8') {
+            $phone = '+7' . substr($phone, 1);
+        }
+        $phone = str_replace(['(', ')', '-', ' '], '', $phone);
+        $order_payload['phone'] = $phone;
     }
     if (array_key_exists('email', $order)) {
         $order_payload['profile']['email'] = $order['email'];
