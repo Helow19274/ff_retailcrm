@@ -40,13 +40,25 @@ if ($_POST['action'] == 'create') {
             'value' => $tariff
         ]]
     ];
-    $rate = send_request($oa_base . 'delivery-services/rates', $payload)['_embedded']['rates'];
+    $rate = send_request($oa_base . 'delivery-services/rates', $payload);
+    if (!array_key_exists('_embedded', $rate)) {
+        failed_to_create_order('Произошла ошибка, попробуйте позже. Если проблема сохраняется, обратитесь в поддержку');
+        die();
+    }
+    $rate = $rate['_embedded']['rates'];
     if (sizeof($rate) == 0) {
         failed_to_create_order('В ФФ не найден тариф доставки ' . $tariff);
         die();
     }
 
-    $paid = $order['prepaySum'] != 0;
+    $not_paid_sum = $order['totalSumm'];
+    foreach ($order['payments'] as $payment) {
+        if ($payment['status'] == 'paid') {
+            $not_paid_sum -= $payment['amount'];
+        }
+    }
+    $paid = $not_paid_sum == 0;
+    $not_paid_sum -= $order['delivery']['cost'];
 
     $name = [];
     if (array_key_exists('lastName', $order)) {
@@ -73,8 +85,7 @@ if ($_POST['action'] == 'create') {
             'sender' => $oa_warehouses[$order['shipmentStore']][1],
             'rate' => $rate[0]['id'],
             'deliveryService' => 1,
-            'retailPrice' => $paid ? '0' : $order['delivery']['cost'],
-            'payment' => $paid ? '0' : $order['totalSumm']
+            'retailPrice' => $paid ? '0' : $order['delivery']['cost']
         ],
         'orderProducts' => []
     ];
@@ -105,12 +116,19 @@ if ($_POST['action'] == 'create') {
         ];
         $servicePoint = send_request($oa_base . 'delivery-services/service-points', $payload)['_embedded']['servicePoints'];
         if (sizeof($servicePoint) == 0) {
-            failed_to_create_order('В базе ФФ не найден выбранный ПВЗ, обратитесь в службу поддержки');
-            die();
+            if (!array_key_exists("trackingNumber", $order_payload['deliveryRequest'])) {
+                failed_to_create_order('В базе ФФ не найден выбранный ПВЗ, обратитесь в службу поддержки');
+                die();
+            } else {
+                $order_payload['deliveryRequest']['servicePoint'] = 1014756;
+                $order_payload['address']['locality'] = 62216;
+                $order_payload['address']['postcode'] = '901251';
+            }
+        } else {
+            $order_payload['deliveryRequest']['servicePoint'] = $servicePoint[0]['id'];
+            $order_payload['address']['locality'] = $servicePoint[0]['_embedded']['locality']['id'];
+            $order_payload['address']['postcode'] = $servicePoint[0]['_embedded']['locality']['postcode'];
         }
-        $order_payload['deliveryRequest']['servicePoint'] = $servicePoint[0]['id'];
-        $order_payload['address']['locality'] = $servicePoint[0]['_embedded']['locality']['id'];
-        $order_payload['address']['postcode'] = $servicePoint[0]['_embedded']['locality']['postcode'];
     } else {
         $order_payload['address']['notFormal'] = $order['delivery']['address']['city'] . ', ' . $order['delivery']['address']['text'];
         if (array_key_exists('street', $order['delivery']['address'])) {
@@ -145,7 +163,7 @@ if ($_POST['action'] == 'create') {
         $headers = [
             'Authorization: Bearer ' . $key
         ];
-        $postal_codes = send_request($cdek_base . 'location/cities', $payload, null, $headers)[0]['postal_codes'];
+        $postal_codes = send_request($cdek_base . 'location/postalcodes', $payload, null, $headers)['postal_codes'];
 
         $payload = [
             'filter' => [[
@@ -163,13 +181,22 @@ if ($_POST['action'] == 'create') {
         }
 
         if (!array_key_exists('locality', $order_payload['address'])) {
-            failed_to_create_order('В базе ФФ не найдено выбранное местоположение');
-            die();
+            if (!array_key_exists("trackingNumber", $order_payload['deliveryRequest'])) {
+                failed_to_create_order('В базе ФФ не найдено выбранное местоположение');
+                die();
+            } else {
+                $order_payload['address']['locality'] = 62216;
+                $order_payload['address']['postcode'] = '901251';
+            }
         }
     }
 
+    if ($order_payload['address']['locality'] == 170608) {
+        $order_payload['address']['locality'] = 87368;
+    }
+
     function add_product($sku, $quantity, $price) {
-        global $oa_base, $oa_shop, $order_payload;
+        global $oa_base, $oa_shop, $order_payload, $not_paid_sum;
         $payload = [
             'filter' => [[
                 'type' => 'eq',
@@ -182,6 +209,16 @@ if ($_POST['action'] == 'create') {
         if (sizeof($offer) == 0) {
             failed_to_create_order('В базе ФФ не найден товар ' . $sku);
             die();
+        }
+
+        if ($order_payload['paymentState'] == 'not_paid' && $not_paid_sum > 0) {
+            if ($not_paid_sum > $price) {
+                $not_paid_sum -= $price;
+                $price = 0;
+            } else {
+                $price = $not_paid_sum;
+                $not_paid_sum = 0;
+            }
         }
 
         $order_payload['orderProducts'][] = [
