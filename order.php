@@ -214,7 +214,6 @@ if ($_POST['action'] == 'create') {
         if ($order_payload['paymentState'] == 'not_paid' && $not_paid_sum > 0) {
             if ($not_paid_sum > $price) {
                 $not_paid_sum -= $price;
-                $price = 0;
             } else {
                 $price = $not_paid_sum;
                 $not_paid_sum = 0;
@@ -225,8 +224,7 @@ if ($_POST['action'] == 'create') {
             'count' => $quantity,
             'shop' => $oa_shop,
             'productOffer' => $offer[0]['id'],
-            'price' => $price,
-            'payment' => $price,
+            'price' => $price
         ];
     }
 
