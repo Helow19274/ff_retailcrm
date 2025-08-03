@@ -4,9 +4,8 @@ $cdek_key1 = '';
 $cdek_key2 = '';
 $oa_login = '';
 $oa_password = '';
-$oa_shop = 0;
 $oa_warehouses = [
-    'sklad-1' => [0, 0]
+    'sklad-1' => [0, 0, 0],
 ];
 
 $retail_base = 'https://retail.retailcrm.ru/api/v5/';

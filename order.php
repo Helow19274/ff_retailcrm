@@ -69,20 +69,27 @@ if ($_POST['action'] == 'create') {
         $name[] = $order['patronymic'];
     }
 
+    if (isset($oa_warehouses[$order['shipmentStore']])) {
+        [$shop, $warehouse, $sender] = $oa_warehouses[$order['shipmentStore']];
+    } else {
+        failed_to_create_order('В настройках не найдены данные для склада ' . $order['shipmentStore']);
+        die();
+    }
+
     $order_payload = [
         'paymentState' => $paid ? 'paid' : 'not_paid',
         'extId' => $order['id'],
-        'shop' => $oa_shop,
+        'shop' => $shop,
         'profile' => [
             'name' => implode(' ', $name)
         ],
         'address' => [
         ],
         'eav' => [
-            'order-reserve-warehouse' => $oa_warehouses[$order['shipmentStore']][0]
+            'order-reserve-warehouse' => $warehouse
         ],
         'deliveryRequest' => [
-            'sender' => $oa_warehouses[$order['shipmentStore']][1],
+            'sender' => $sender,
             'rate' => $rate[0]['id'],
             'deliveryService' => 1,
             'retailPrice' => $paid ? '0' : $order['delivery']['cost']
@@ -196,7 +203,7 @@ if ($_POST['action'] == 'create') {
     }
 
     function add_product($sku, $quantity, $price) {
-        global $oa_base, $oa_shop, $order_payload, $not_paid_sum;
+        global $oa_base, $shop, $order_payload, $not_paid_sum;
         $payload = [
             'filter' => [[
                 'type' => 'eq',
@@ -222,7 +229,7 @@ if ($_POST['action'] == 'create') {
 
         $order_payload['orderProducts'][] = [
             'count' => $quantity,
-            'shop' => $oa_shop,
+            'shop' => $shop,
             'productOffer' => $offer[0]['id'],
             'price' => $price
         ];
