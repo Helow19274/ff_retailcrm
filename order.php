@@ -207,6 +207,11 @@ if ($_POST['action'] == 'create') {
         $payload = [
             'filter' => [[
                 'type' => 'eq',
+                'field' => 'shop',
+                'value' => $shop
+            ],
+            [
+                'type' => 'eq',
                 'field' => 'article',
                 'value' => $sku
             ]]
